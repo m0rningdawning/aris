@@ -1,2 +1,2 @@
-# tetris-pygame
-2D Tetris game made in Python with Pygame(Postponed for now 😉)
+# aris
+Aris is an ASCII-styled Tetris clone made in Python for Windows and Linux.
