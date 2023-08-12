@@ -112,10 +112,10 @@ def display_game(screen):
         previous_time = current_time
         total_time += elapsed_time
 
-        key = screen.get_key()
-
         while total_time >= frametime:
-            current_tetromino_speed = 0.1
+            current_tetromino_speed = 0.05
+            
+            key = screen.get_key()
             if key == Screen.KEY_LEFT:
                 if not check_collision(board, current_tetromino, tetromino_x - 2, tetromino_y):
                     tetromino_x -= 2
@@ -153,7 +153,7 @@ def display_game(screen):
 
             total_time -= frametime
 
-        screen.clear()
+        screen.refresh()
 
         draw_board(screen, board, board_width, board_height)
 
