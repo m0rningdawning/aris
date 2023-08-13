@@ -21,8 +21,11 @@ class GameState:
     PAUSED = 2
 
 
-def choose_tetromino():
-    return random.choice(TETROMINOES)
+def choose_tetromino(prevoius_tetromino):
+    choice = random.choice(TETROMINOES)
+    while (choice == prevoius_tetromino):
+        choice = random.choice(TETROMINOES)
+    return choice
 
 
 def draw_tetromino(screen, tetromino, x: int, y: int):
@@ -69,12 +72,27 @@ def draw_board(screen, board, board_width, board_height):
                     screen.print_at('[]', col, row + 1)
 
 
-def remove_lines(board):
-    lines_to_remove = [i for i, row in enumerate(
-        board) if all(cell != 0 for cell in row)]
-    for line in reversed(lines_to_remove):
-        del board[line]
-        board.insert(0, [0 for _ in range(len(board[0]))])
+def check_lines_and_score(board, score):
+    amount = 0
+    lines = 0
+    for row in range(len(board)):
+        for col in range(len(board[0])):
+            amount += board[row][col]
+            if amount == 10:
+                remove_line(board, row)
+                lines += 1
+        amount = 0
+
+    if lines != 0:
+        score += 100 * lines
+
+    return score
+
+
+def remove_line(board, targ_row):
+    while targ_row != 0:
+        board[targ_row] = board[targ_row - 1][:]
+        targ_row -= 1
 
 
 def display_game(screen):
@@ -89,7 +107,8 @@ def display_game(screen):
     previous_time = int(time.time() * 1000)
     total_time = 0
 
-    current_tetromino = choose_tetromino()
+    previous_tetromino = None
+    current_tetromino = choose_tetromino(previous_tetromino)
     tetromino_x = board_width // 2
     tetromino_y = 0
 
@@ -113,8 +132,8 @@ def display_game(screen):
         total_time += elapsed_time
 
         while total_time >= frametime:
-            current_tetromino_speed = 0.05
-            
+            current_tetromino_speed = 0.025
+
             key = screen.get_key()
             if key == Screen.KEY_LEFT:
                 if not check_collision(board, current_tetromino, tetromino_x - 2, tetromino_y):
@@ -142,16 +161,18 @@ def display_game(screen):
             else:
                 update_board(board, current_tetromino,
                              tetromino_x, tetromino_y)
-                remove_lines(board)
                 tetromino_x = board_width // 2
-                tetromino_y: int = 0
-                current_tetromino = choose_tetromino()
+                tetromino_y = 0
+                current_tetromino = choose_tetromino(previous_tetromino)
+                previous_tetromino = current_tetromino
                 if check_collision(board, current_tetromino, tetromino_x, tetromino_y):
                     if check_collision(board, current_tetromino, tetromino_x, tetromino_y + 1):
                         current_state = GameState.GAME_OVER
                         break
 
             total_time -= frametime
+
+        score = check_lines_and_score(board, score)
 
         screen.refresh()
 
