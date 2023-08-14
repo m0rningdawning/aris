@@ -4,6 +4,21 @@ import platform
 from asciimatics.screen import Screen
 
 
+# Global variables
+
+board = None
+board_width = 10
+board_height = 20
+previous_tetromino = None
+current_tetromino = None
+tetromino_x = None
+tetromino_y = None
+score = None
+collision_time = None
+current_state = None
+is_paused = False
+
+
 TETROMINOES = [
     [[1, 1, 1, 1]],
     [[1, 1, 1], [0, 1, 0]],
@@ -18,7 +33,6 @@ TETROMINOES = [
 class GameState:
     PLAYING = 0
     GAME_OVER = 1
-    PAUSED = 2
 
 
 def choose_tetromino(prevoius_tetromino):
@@ -95,11 +109,43 @@ def remove_line(board, targ_row):
         targ_row -= 1
 
 
+# def pause_game():
+
+def restart_game():
+    global board
+    global previous_tetromino
+    global current_tetromino
+    global tetromino_x
+    global tetromino_y
+    global score
+    global collision_time
+    global current_state
+    global is_paused
+
+    board = [[0 for _ in range(board_width * 2)] for _ in range(board_height)]
+    previous_tetromino = None
+    current_tetromino = choose_tetromino(previous_tetromino)
+    tetromino_x = board_width // 2 + 2
+    tetromino_y = 0
+    score = 0
+    collision_time = None
+    is_paused = False
+    current_state = GameState.PLAYING
+
+
 def display_game(screen):
+    global board
+    global previous_tetromino
+    global current_tetromino
+    global tetromino_x
+    global tetromino_y
+    global score
+    global collision_time
+    global current_state
+    global is_paused
+
     current_platform = platform.system()
 
-    board_height = 20
-    board_width = 10
     board = [[0 for _ in range(board_width * 2)] for _ in range(board_height)]
 
     fps = 60
@@ -107,9 +153,8 @@ def display_game(screen):
     previous_time = int(time.time() * 1000)
     total_time = 0
 
-    previous_tetromino = None
     current_tetromino = choose_tetromino(previous_tetromino)
-    tetromino_x = board_width // 2
+    tetromino_x = board_width // 2 + 2
     tetromino_y = 0
 
     score = 0
@@ -133,58 +178,93 @@ def display_game(screen):
 
         while total_time >= frametime:
             current_tetromino_speed = 0.025
-
             key = screen.get_key()
-            if key == Screen.KEY_LEFT:
-                if not check_collision(board, current_tetromino, tetromino_x - 2, tetromino_y):
-                    tetromino_x -= 2
+            if not is_paused:
+                if key == Screen.KEY_LEFT:
+                    if not check_collision(board, current_tetromino, tetromino_x - 2, tetromino_y):
+                        tetromino_x -= 2
 
-            elif key == Screen.KEY_RIGHT:
-                if not check_collision(board, current_tetromino, tetromino_x + 2, tetromino_y):
-                    tetromino_x += 2
+                elif key == Screen.KEY_RIGHT:
+                    if not check_collision(board, current_tetromino, tetromino_x + 2, tetromino_y):
+                        tetromino_x += 2
 
-            elif key == Screen.KEY_UP:
-                rotated_tetromino = list(zip(*reversed(current_tetromino)))
-                if not check_collision(board, rotated_tetromino, tetromino_x, int(tetromino_y)):
-                    current_tetromino = rotated_tetromino
+                elif key == Screen.KEY_UP:
+                    rotated_tetromino = list(zip(*reversed(current_tetromino)))
+                    if not check_collision(board, rotated_tetromino, tetromino_x, int(tetromino_y)):
+                        current_tetromino = rotated_tetromino
 
-            elif key == Screen.KEY_DOWN:
-                if not check_collision(board, current_tetromino, tetromino_x, int(tetromino_y) + 1):
-                    tetromino_y += 1
+                elif key == Screen.KEY_DOWN:
+                    if not check_collision(board, current_tetromino, tetromino_x, int(tetromino_y) + 1):
+                        tetromino_y += 1
+
+            if key == ord('R') or key == ord('r'):
+                restart_game()
+
+            elif key == ord(' '):
+                is_paused = not is_paused
+                continue
 
             elif key == Screen.KEY_ESCAPE:
                 current_state = GameState.GAME_OVER
                 break
 
-            if not check_collision(board, current_tetromino, tetromino_x, tetromino_y + 1):
-                tetromino_y += current_tetromino_speed
+            if not is_paused:
+                if not check_collision(board, current_tetromino, tetromino_x, tetromino_y + 1):
+                    tetromino_y += current_tetromino_speed
+                else:
+                    if collision_time is None:
+                        collision_time = time.time()
+
+                    elapsed_time = time.time() - collision_time
+                    if elapsed_time < 0.5:
+                        key = screen.get_key()
+                        if key == Screen.KEY_LEFT:
+                            if not check_collision(board, current_tetromino, tetromino_x - 2, tetromino_y):
+                                tetromino_x -= 2
+
+                        elif key == Screen.KEY_RIGHT:
+                            if not check_collision(board, current_tetromino, tetromino_x + 2, tetromino_y):
+                                tetromino_x += 2
+
+                        elif key == Screen.KEY_UP:
+                            rotated_tetromino = list(
+                                zip(*reversed(current_tetromino)))
+                            if not check_collision(board, rotated_tetromino, tetromino_x, int(tetromino_y)):
+                                current_tetromino = rotated_tetromino
+                    else:
+                        update_board(board, current_tetromino,
+                                     tetromino_x, tetromino_y)
+                        tetromino_x = board_width // 2 + 2
+                        tetromino_y = 0
+                        current_tetromino = choose_tetromino(
+                            previous_tetromino)
+                        previous_tetromino = current_tetromino
+                        collision_time = None
+
+                        if check_collision(board, current_tetromino, tetromino_x, tetromino_y):
+                            if check_collision(board, current_tetromino, tetromino_x, tetromino_y + 1):
+                                current_state = GameState.GAME_OVER
+                                break
+
+                score = check_lines_and_score(board, score)
+                screen.refresh()
+                draw_board(screen, board, board_width, board_height)
+                draw_tetromino(screen, current_tetromino,
+                               tetromino_x, tetromino_y + 1)
+
             else:
-                update_board(board, current_tetromino,
-                             tetromino_x, tetromino_y)
-                tetromino_x = board_width // 2
-                tetromino_y = 0
-                current_tetromino = choose_tetromino(previous_tetromino)
-                previous_tetromino = current_tetromino
-                if check_collision(board, current_tetromino, tetromino_x, tetromino_y):
-                    if check_collision(board, current_tetromino, tetromino_x, tetromino_y + 1):
-                        current_state = GameState.GAME_OVER
-                        break
+                screen.print_at("GAME PAUSED", board_width //
+                                2, board_height // 2 + 1)
 
             total_time -= frametime
+            screen.print_at(f"Score: {score}", 0, board_height + 2)
 
-        score = check_lines_and_score(board, score)
+            screen.refresh()
 
-        screen.refresh()
-
-        draw_board(screen, board, board_width, board_height)
-
-        draw_tetromino(screen, current_tetromino, tetromino_x, tetromino_y + 1)
-
-        screen.print_at(f"Score: {score}", 0, board_height + 2)
-
-        screen.refresh()
-
-    screen.print_at("GAME OVER", board_width // 2 + 1, board_height // 2 + 1)
+    screen.clear()
+    screen.print_at("GAME OVER", board_width // 2 + 1, board_height // 2)
+    screen.print_at("Your Score:", board_width // 2, board_height // 2 + 1)
+    screen.print_at(f"{score}", board_width, board_height // 2 + 2)
     screen.refresh()
     time.sleep(2)
 
