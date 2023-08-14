@@ -2,6 +2,7 @@ import random
 import time
 import platform
 from asciimatics.screen import Screen
+from tetrominoes import TETROMINOES
 
 
 # Global variables
@@ -19,27 +20,16 @@ current_state = None
 is_paused = False
 
 
-TETROMINOES = [
-    [[1, 1, 1, 1]],
-    [[1, 1, 1], [0, 1, 0]],
-    [[1, 1, 1], [1, 0, 0]],
-    [[1, 1], [1, 1]],
-    [[0, 1, 1], [1, 1, 0]],
-    [[1, 1, 0], [0, 1, 1]],
-    [[0, 1, 0], [1, 1, 1]]
-]
-
-
 class GameState:
     PLAYING = 0
     GAME_OVER = 1
 
 
-def choose_tetromino(prevoius_tetromino):
-    choice = random.choice(TETROMINOES)
-    while (choice == prevoius_tetromino):
-        choice = random.choice(TETROMINOES)
-    return choice
+def choose_tetromino(previous_tetromino):
+    available_tetrominos = [tetromino_type for tetromino_type in TETROMINOES.keys(
+    ) if tetromino_type != previous_tetromino]
+    random_tetromino_type = random.choice(available_tetrominos)
+    return TETROMINOES[random_tetromino_type][0]
 
 
 def draw_tetromino(screen, tetromino, x: int, y: int):
@@ -58,6 +48,13 @@ def check_collision(board, tetromino, x: int, y: int):
                 if board[int(y) + row][x + col * 2] != 0:
                     return True
     return False
+
+
+def drop_tetromino(board, tetromino, x, y):
+    drop_distance = 0
+    while not check_collision(board, tetromino, x, y + drop_distance + 1):
+        drop_distance += 1
+    return drop_distance
 
 
 def update_board(board, tetromino, x: int, y: int):
@@ -108,8 +105,6 @@ def remove_line(board, targ_row):
         board[targ_row] = board[targ_row - 1][:]
         targ_row -= 1
 
-
-# def pause_game():
 
 def restart_game():
     global board
@@ -197,10 +192,15 @@ def display_game(screen):
                     if not check_collision(board, current_tetromino, tetromino_x, int(tetromino_y) + 1):
                         tetromino_y += 1
 
+                elif key == ord(' '):
+                    drop_distance = drop_tetromino(
+                        board, current_tetromino, tetromino_x, tetromino_y)
+                    tetromino_y += drop_distance
+
             if key == ord('R') or key == ord('r'):
                 restart_game()
 
-            elif key == ord(' '):
+            elif key == ord('P') or key == ord('p'):
                 is_paused = not is_paused
                 continue
 
