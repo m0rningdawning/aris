@@ -1,6 +1,5 @@
 import random
 import time
-import platform
 from asciimatics.screen import Screen
 from tetrominoes import TETROMINOES
 from game_interface import draw_help_section, draw_next_section, draw_end_screen
@@ -29,6 +28,8 @@ current_state = None
 is_paused = False
 is_finished = False
 is_cleared = False
+is_dropped = False
+is_ghost = False
 
 
 class GameState:
@@ -48,6 +49,16 @@ def draw_tetromino(screen, tetromino, x: int, y: int):
         for col in range(len(tetromino[0])):
             if tetromino[row][col]:
                 screen.print_at('[]', x + col * 2, int(y) + row)
+
+
+def draw_ghost(screen, tetromino, x: int, y: int):
+    ghost_drop_distance = drop_tetromino(board, tetromino, x, y)
+    ghost_y = int(y) + ghost_drop_distance
+    if ghost_y < board_height:
+        for row in range(len(tetromino)):
+            for col in range(len(tetromino[0])):
+                if tetromino[row][col]:
+                    screen.print_at('@@', x + col * 2, ghost_y + row + 3)
 
 
 def check_collision(board, tetromino, x: int, y: int):
@@ -109,9 +120,15 @@ def check_lines_and_score(board):
                 current_lines += 1
         amount_of_ones = 0
 
-    if current_lines != 0:
-        score += 100 * current_lines
-        lines += current_lines
+    if current_lines == 1:
+        score += 100
+    elif current_lines == 2:
+        score += 300
+    elif current_lines == 3:
+        score += 500
+    elif current_lines == 4:
+        score += 800
+    lines += current_lines
 
 
 def remove_line(board, targ_row):
@@ -164,6 +181,8 @@ def display_game(screen):
     global is_paused
     global is_finished
     global is_cleared
+    global is_dropped
+    global is_ghost
 
     board = [[0 for _ in range(board_width * 2)] for _ in range(board_height)]
 
@@ -177,6 +196,8 @@ def display_game(screen):
         current_tetromino_type)
     tetromino_x = board_width // 2 + 2
     tetromino_y = 0
+
+    collided = False
 
     current_state = GameState.PLAYING
 
@@ -206,11 +227,17 @@ def display_game(screen):
                 elif key == Screen.KEY_DOWN or key == ord('S') or key == ord('s') or key == ord('J') or key == ord('j'):
                     if not check_collision(board, current_tetromino, tetromino_x, int(tetromino_y) + 1):
                         tetromino_y += 1
+                        score += 1
 
                 elif key == ord(' '):
+                    is_dropped = True
                     drop_distance = drop_tetromino(
                         board, current_tetromino, tetromino_x, tetromino_y)
                     tetromino_y += drop_distance
+                    score += drop_distance * 2
+
+                elif key == ord('G') or key == ord('g'):
+                    is_ghost = not is_ghost
 
             if not is_finished:
                 if key == ord('R') or key == ord('r'):
@@ -229,11 +256,12 @@ def display_game(screen):
                 if not check_collision(board, current_tetromino, tetromino_x, tetromino_y + 1):
                     tetromino_y += current_tetromino_speed
                 else:
+                    collided = True
                     if collision_time is None:
                         collision_time = time.time()
 
                     elapsed_time = time.time() - collision_time
-                    if elapsed_time < 0.5:
+                    if elapsed_time < 0.5 and not is_dropped:
                         key = screen.get_key()
                         if key == Screen.KEY_LEFT or key == ord('A') or key == ord('a') or key == ord('H') or key == ord('h'):
                             if not check_collision(board, current_tetromino, tetromino_x - 2, tetromino_y):
@@ -248,7 +276,15 @@ def display_game(screen):
                                 zip(*reversed(current_tetromino)))
                             if not check_collision(board, rotated_tetromino, tetromino_x, int(tetromino_y)):
                                 current_tetromino = rotated_tetromino
-                    else:
+
+                    elif elapsed_time == 0.5 and not is_dropped:
+                        if check_collision(board, current_tetromino, tetromino_x, tetromino_y + 1):
+                            collided = True
+                        else:
+                            collision_time = None
+                            collided = False
+
+                    elif is_dropped or collided:
                         update_board(board, current_tetromino,
                                      tetromino_x, tetromino_y)
                         tetromino_x = board_width // 2 + 2
@@ -258,6 +294,8 @@ def display_game(screen):
                         next_tetromino, next_tetromino_type = choose_tetromino(
                             current_tetromino_type)
                         collision_time = None
+                        is_dropped = False
+                        collided = False
 
                         if check_collision(board, current_tetromino, tetromino_x, tetromino_y):
                             if check_collision(board, current_tetromino, tetromino_x, tetromino_y + 1):
@@ -268,6 +306,9 @@ def display_game(screen):
                 check_lines_and_score(board)
                 screen.refresh()
                 draw_board(screen, board, board_width, board_height)
+                if is_ghost:
+                    draw_ghost(screen, current_tetromino,
+                               tetromino_x, tetromino_y)
                 draw_tetromino(screen, current_tetromino,
                                tetromino_x, tetromino_y + 3)
                 draw_next_section(screen, next_tetromino,
