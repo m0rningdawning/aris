@@ -1,5 +1,6 @@
 import random
 import time
+import threading
 from asciimatics.screen import Screen
 from tetrominoes import TETROMINOES
 from game_interface import draw_help_section, draw_next_section, draw_end_screen
@@ -18,10 +19,15 @@ next_tetromino_type = None
 
 tetromino_x = None
 tetromino_y = None
+tetromino_speed = None
 
 score = 0
 lines = 0
+level = 1
+levelup = level * 5
 
+start_time = None
+formatted_time = None
 collision_time = None
 
 current_state = None
@@ -35,6 +41,12 @@ is_ghost = False
 class GameState:
     PLAYING = 0
     GAME_OVER = 1
+
+
+def format_time(seconds):
+    minutes, seconds = divmod(seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+    return f"{hours:02}:{minutes:02}:{seconds:02}"
 
 
 def choose_tetromino(previous_tetromino):
@@ -110,6 +122,9 @@ def draw_board(screen, board, board_width, board_height):
 def check_lines_and_score(board):
     global score
     global lines
+    global level
+    global levelup
+    global tetromino_speed
     current_lines = 0
     amount_of_ones = 0
     for row in range(len(board)):
@@ -121,14 +136,19 @@ def check_lines_and_score(board):
         amount_of_ones = 0
 
     if current_lines == 1:
-        score += 100
+        score += 100 * level
     elif current_lines == 2:
-        score += 300
+        score += 300 * level
     elif current_lines == 3:
-        score += 500
+        score += 500 * level
     elif current_lines == 4:
-        score += 800
+        score += 800 * level
     lines += current_lines
+
+    if lines >= levelup:
+        level += 1
+        levelup = level * 5
+        tetromino_speed = 0.02 * level * 0.75
 
 
 def remove_line(board, targ_row):
@@ -145,8 +165,14 @@ def restart_game():
     global next_tetromino_type
     global tetromino_x
     global tetromino_y
+    global tetromino_speed
     global score
     global lines
+    global level
+    global levelup
+    global is_ghost
+    global is_dropped
+    global start_time
     global collision_time
     global current_state
     global is_paused
@@ -158,11 +184,17 @@ def restart_game():
         current_tetromino_type)
     tetromino_x = board_width // 2 + 2
     tetromino_y = 0
+    tetromino_speed = 0.02
     score = 0
     lines = 0
+    level = 1
+    levelup = level * 5
+    start_time = time.time()
     collision_time = None
     is_paused = False
     is_finished = False
+    is_dropped = False
+    is_ghost = False
     current_state = GameState.PLAYING
 
 
@@ -174,8 +206,11 @@ def display_game(screen):
     global next_tetromino_type
     global tetromino_x
     global tetromino_y
+    global tetromino_speed
     global score
     global lines
+    global start_time
+    global formatted_time
     global collision_time
     global current_state
     global is_paused
@@ -183,6 +218,10 @@ def display_game(screen):
     global is_cleared
     global is_dropped
     global is_ghost
+    global start_time
+
+    if start_time is None:
+        start_time = time.time()
 
     board = [[0 for _ in range(board_width * 2)] for _ in range(board_height)]
 
@@ -190,12 +229,15 @@ def display_game(screen):
     frametime = 1000 // fps
     previous_time = int(time.time() * 1000)
     total_time = 0
+    elapsed_seconds = 0
 
     current_tetromino, current_tetromino_type = choose_tetromino(None)
     next_tetromino, next_tetromino_type = choose_tetromino(
         current_tetromino_type)
     tetromino_x = board_width // 2 + 2
     tetromino_y = 0
+
+    tetromino_speed = 0.02
 
     collided = False
 
@@ -208,7 +250,6 @@ def display_game(screen):
         total_time += elapsed_time
 
         while total_time >= frametime:
-            current_tetromino_speed = 0.02
             key = screen.get_key()
             if not is_paused and not is_finished:
                 if key == Screen.KEY_LEFT or key == ord('A') or key == ord('a') or key == ord('H') or key == ord('h'):
@@ -245,6 +286,10 @@ def display_game(screen):
 
                 elif key == ord('P') or key == ord('p'):
                     is_paused = not is_paused
+                    if is_paused:
+                        elapsed_seconds = int(time.time() - start_time)
+                    else:
+                        start_time = time.time() - elapsed_seconds
                     continue
 
                 elif key == Screen.KEY_ESCAPE or key == ord('Q') or key == ord('q'):
@@ -254,7 +299,7 @@ def display_game(screen):
 
             if not is_paused:
                 if not check_collision(board, current_tetromino, tetromino_x, tetromino_y + 1):
-                    tetromino_y += current_tetromino_speed
+                    tetromino_y += tetromino_speed
                 else:
                     collided = True
                     if collision_time is None:
@@ -312,7 +357,7 @@ def display_game(screen):
                 draw_tetromino(screen, current_tetromino,
                                tetromino_x, tetromino_y + 3)
                 draw_next_section(screen, next_tetromino,
-                                  board_width, score, lines)
+                                  board_width, score, lines, level, formatted_time)
                 draw_help_section(screen, board_width)
 
             else:
@@ -324,7 +369,8 @@ def display_game(screen):
                     if not is_cleared:
                         screen.clear()
                         is_cleared = True
-                    draw_end_screen(screen, board_width, score, lines)
+                    draw_end_screen(screen, board_width, score,
+                                    lines, level, formatted_time)
                     screen.refresh()
                     if key == ord('R') or key == ord('r'):
                         screen.clear()
@@ -338,6 +384,11 @@ def display_game(screen):
 
             total_time -= frametime
             screen.refresh()
+
+        if not is_paused:
+            elapsed_seconds = int(time.time() - start_time)
+        formatted_time = format_time(elapsed_seconds)
+        screen.refresh()
 
     screen.clear()
 
