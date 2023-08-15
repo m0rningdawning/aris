@@ -28,6 +28,7 @@ collision_time = None
 current_state = None
 is_paused = False
 is_finished = False
+is_cleared = False
 
 
 class GameState:
@@ -148,20 +149,6 @@ def restart_game():
     current_state = GameState.PLAYING
 
 
-def end_game(screen):
-    global current_state
-    while True:
-        key = screen.get_key()
-        if key == ord('R') or key == ord('r'):
-            screen.clear()
-            current_state = GameState.PLAYING
-            restart_game()
-            break
-        elif key == Screen.KEY_ESCAPE or key == ord('Q') or key == ord('q'):
-            current_state = GameState.GAME_OVER
-            break
-
-
 def display_game(screen):
     global board
     global current_tetromino
@@ -176,6 +163,7 @@ def display_game(screen):
     global current_state
     global is_paused
     global is_finished
+    global is_cleared
 
     board = [[0 for _ in range(board_width * 2)] for _ in range(board_height)]
 
@@ -199,9 +187,9 @@ def display_game(screen):
         total_time += elapsed_time
 
         while total_time >= frametime:
-            current_tetromino_speed = 0.025
+            current_tetromino_speed = 0.02
             key = screen.get_key()
-            if not is_paused:
+            if not is_paused and not is_finished:
                 if key == Screen.KEY_LEFT or key == ord('A') or key == ord('a') or key == ord('H') or key == ord('h'):
                     if not check_collision(board, current_tetromino, tetromino_x - 2, tetromino_y):
                         tetromino_x -= 2
@@ -224,16 +212,18 @@ def display_game(screen):
                         board, current_tetromino, tetromino_x, tetromino_y)
                     tetromino_y += drop_distance
 
-            if key == ord('R') or key == ord('r'):
-                restart_game()
+            if not is_finished:
+                if key == ord('R') or key == ord('r'):
+                    restart_game()
 
-            elif key == ord('P') or key == ord('p'):
-                is_paused = not is_paused
-                continue
+                elif key == ord('P') or key == ord('p'):
+                    is_paused = not is_paused
+                    continue
 
-            elif key == Screen.KEY_ESCAPE or key == ord('Q') or key == ord('q'):
-                is_finished = True
-                break
+                elif key == Screen.KEY_ESCAPE or key == ord('Q') or key == ord('q'):
+                    is_finished = True
+                    is_paused = True
+                    break
 
             if not is_paused:
                 if not check_collision(board, current_tetromino, tetromino_x, tetromino_y + 1):
@@ -272,6 +262,7 @@ def display_game(screen):
                         if check_collision(board, current_tetromino, tetromino_x, tetromino_y):
                             if check_collision(board, current_tetromino, tetromino_x, tetromino_y + 1):
                                 is_finished = True
+                                is_paused = True
                                 break
 
                 check_lines_and_score(board)
@@ -284,15 +275,28 @@ def display_game(screen):
                 draw_help_section(screen, board_width)
 
             else:
-                screen.print_at("GAME PAUSED", board_width //
-                                2, board_height // 2 + 2)
+                if not is_finished:
+                    screen.print_at("GAME PAUSED", board_width //
+                                    2, board_height // 2 + 2)
+                    screen.refresh()
+                if is_finished:
+                    if not is_cleared:
+                        screen.clear()
+                        is_cleared = True
+                    draw_end_screen(screen, board_width, score, lines)
+                    screen.refresh()
+                    if key == ord('R') or key == ord('r'):
+                        screen.clear()
+                        current_state = GameState.PLAYING
+                        is_cleared = False
+                        restart_game()
+                    elif key == Screen.KEY_ESCAPE or key == ord('Q') or key == ord('q'):
+                        is_finished = False
+                        is_paused = False
+                        current_state = GameState.GAME_OVER
 
             total_time -= frametime
-            if is_finished:
-                screen.clear()
-                draw_end_screen(screen, board_width, score, lines)
-                screen.refresh()
-                end_game(screen)
+            screen.refresh()
 
     screen.clear()
 
