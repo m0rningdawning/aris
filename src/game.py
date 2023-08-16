@@ -147,7 +147,7 @@ def check_lines_and_score(board):
 
     if lines >= levelup:
         level += 1
-        levelup = level * 5
+        levelup += level * 5
         tetromino_speed = 0.02 * level * 0.75
 
 
