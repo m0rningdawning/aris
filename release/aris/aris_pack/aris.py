@@ -1,9 +1,8 @@
 import random
 import time
-import threading
 from asciimatics.screen import Screen
-from tetrominoes import TETROMINOES
-from game_interface import draw_help_section, draw_next_section, draw_end_screen
+from aris_pack.game_interface import *
+from aris_pack.tetrominoes import *
 
 
 # Global variables
