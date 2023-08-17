@@ -99,7 +99,7 @@ def update_board(board, tetromino, x: int, y: int):
 
 def draw_board(screen, board, board_width, board_height):
     screen.print_at('  __________________', 0, 0)
-    screen.print_at(' /! +++ Tetris +++ !\ ', 0, 1)
+    screen.print_at(' /! +++  Aris  +++ !\ ', 0, 1)
     for row in range(board_height + 2):
         screen.print_at('!', 0, row + 2)
         screen.print_at('!', board_width * 2 + 1, row + 2)
