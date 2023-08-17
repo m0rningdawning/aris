@@ -21,7 +21,7 @@ To uninstall the game run ```pip uninstall aris``` from your terminal.
 
 ## Preview
 
-![image](https://github.com/m0rningdawning/aris/assets/102054245/f2bfa0f2-3383-4e80-aa1a-2f72e2b451b8)
+![image](https://github.com/m0rningdawning/aris/assets/102054245/e1e5cd33-dd24-4e18-abdf-54080f2160b7)
 
 ## Credits
 Inspired by:  
