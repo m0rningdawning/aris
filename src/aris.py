@@ -248,6 +248,13 @@ def display_game(screen):
         previous_time = current_time
         total_time += elapsed_time
 
+        if screen.has_resized():
+            screen.clear()
+            old_screen = screen
+            screen = None
+            old_screen.close()
+            screen = Screen.open()
+
         while total_time >= frametime:
             key = screen.get_key()
             if not is_paused and not is_finished:
