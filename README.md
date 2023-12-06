@@ -2,6 +2,11 @@
 
 Aris is a cross-platform, ASCII-styled Tetris clone made in Python for Windows and Linux.
 
+![GitHub language count](https://img.shields.io/github/languages/count/m0rningdawning/aris)
+![GitHub top language](https://img.shields.io/github/languages/top/m0rningdawning/aris) 
+![GitHub last commit](https://img.shields.io/github/last-commit/m0rningdawning/aris)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+
 ## Setup 
 
 Before installing the application, make sure ```Python 3``` is installed on your machine.
