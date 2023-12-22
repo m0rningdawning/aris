@@ -9,7 +9,7 @@ Aris is a cross-platform, ASCII-styled Tetris clone made in Python for Windows a
 
 ## Setup 
 
-Before installing the application, make sure ```Python 3``` is installed on your machine.
+Before setting up the application, make sure ```Python 3``` is installed on your machine.
 
 1. Clone the repository to your preferred location.
 2. Navigate to the ```/release/aris``` directory.
@@ -30,4 +30,4 @@ To uninstall the game run ```pip uninstall aris``` from your terminal.
 
 ## Credits
 Inspired by:  
-https://tetris.com/tetris-e60/
+- https://tetris.com/tetris-e60/
